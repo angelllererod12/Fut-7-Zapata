@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor Oficial de Liga de Fútbol</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Deportivas, Modernas y Estilo Street / Graffiti -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;700;900&family=Oswald:wght@500;700&family=Permanent+Marker&family=Rubik+Spray+Paint&family=Sedgwick+Ave+Display&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #10b981;
+            --secondary-color: #f59e0b;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --font-heading: 'Oswald', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        .heading-font {
+            font-family: var(--font-heading);
+            letter-spacing: 0.03em;
+        }
+
+        .bg-primary-custom {
+            background-color: var(--primary-color) !important;
+        }
+
+        .text-primary-custom {
+            color: var(--primary-color) !important;
+        }
+
+        .border-primary-custom {
+            border-color: var(--primary-color) !important;
+        }
+
+        .bg-secondary-custom {
+            background-color: var(--secondary-color) !important;
+        }
+
+        .text-secondary-custom {
+            color: var(--secondary-color) !important;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Ocultar controles de administrador cuando no está autenticado */
+        body:not(.is-admin) .admin-only {
+            display: none !important;
+        }
+
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Notificación Toast Flotante -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Barra Superior de Estado y Acceso Admin -->
+    <div class="bg-black/40 border-b border-white/10 px-4 py-2 text-xs flex flex-wrap justify-between items-center gap-2">
+        <div class="flex items-center gap-2">
+            <span id="connection-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
+            <span id="connection-status" class="text-slate-300">Conectando a la liga en vivo...</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="role-badge" class="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-white/10 font-medium">
+                <i class="fa-solid fa-eye mr-1"></i> Modo Espectador
+            </span>
+            <button id="btn-open-admin-modal" onclick="openAdminModal()" class="text-slate-300 hover:text-white underline transition flex items-center gap-1 cursor-pointer">
+                <i class="fa-solid fa-lock"></i> Acceso Admin
+            </button>
+            <button id="btn-logout-admin" onclick="logoutAdmin()" class="hidden text-rose-400 hover:text-rose-300 underline transition flex items-center gap-1 cursor-pointer">
+                <i class="fa-solid fa-right-from-bracket"></i> Salir de Admin
+            </button>
+        </div>
+    </div>
+
+    <!-- Encabezado Principal de la Liga -->
+    <header class="relative overflow-hidden border-b border-white/10 shadow-xl">
+        <div class="absolute inset-0 opacity-20 pointer-events-none" style="background: radial-gradient(circle at top right, var(--primary-color), transparent 60%), radial-gradient(circle at bottom left, var(--secondary-color), transparent 60%);"></div>
+        <div class="max-w-7xl mx-auto px-4 py-6 sm:py-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                <!-- Escudo de la Liga -->
+                <div class="relative group">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-900/90 border-2 border-primary-custom p-2 flex items-center justify-center shadow-2xl overflow-hidden">
+                        <img id="league-logo-img" src="https://placehold.co/200x200/10b981/ffffff?text=LIGA" alt="Escudo de la Liga" class="w-full h-full object-contain rounded-xl" onerror="this.src='https://placehold.co/200x200/1e293b/ffffff?text=FC'">
+                    </div>
+                    <button onclick="switchTab('settings')" class="admin-only absolute -bottom-2 -right-2 bg-secondary-custom text-slate-950 w-8 h-8 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition cursor-pointer" title="Cambiar Escudo">
+                        <i class="fa-solid fa-camera text-sm"></i>
+                    </button>
+                </div>
+
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold uppercase tracking-wider mb-2 text-secondary-custom">
+                        <i class="fa-solid fa-trophy"></i> <span id="league-season-display">Temporada Oficial 2026</span>
+                    </div>
+                    <h1 id="league-name-display" class="heading-font text-3xl sm:text-5xl font-extrabold uppercase tracking-wide text-white drop-shadow-md">
+                        LIGA PREMIER BARRIO
+                    </h1>
+                    <p id="league-subtitle-display" class="text-slate-300 text-sm sm:text-base mt-1 max-w-xl">
+                        Resultados oficiales, tabla general, plantillas y reporte disciplinario en tiempo real.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Resumen Rápido -->
+            <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
+                <div class="glass-card rounded-xl p-3 text-center">
+                    <div id="stat-teams-count" class="heading-font text-2xl font-bold text-primary-custom">0</div>
+                    <div class="text-[11px] uppercase tracking-wider text-slate-400">Equipos</div>
+                </div>
+                <div class="glass-card rounded-xl p-3 text-center">
+                    <div id="stat-matches-count" class="heading-font text-2xl font-bold text-white">0</div>
+                    <div class="text-[11px] uppercase tracking-wider text-slate-400">Partidos</div>
+                </div>
+                <div class="glass-card rounded-xl p-3 text-center">
+                    <div id="stat-suspended-count" class="heading-font text-2xl font-bold text-rose-500">0</div>
+                    <div class="text-[11px] uppercase tracking-wider text-slate-400">Sancionados</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación por Pestañas -->
+        <nav class="max-w-7xl mx-auto px-4 flex overflow-x-auto gap-2 pb-3 no-scrollbar">
+            <button onclick="switchTab('standings')" data-tab="standings" class="tab-btn active px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-primary-custom text-slate-950 shadow-lg">
+                <i class="fa-solid fa-list-ol"></i> Tabla General
+            </button>
+            <button onclick="switchTab('teams')" data-tab="teams" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-white/5 text-slate-300 hover:bg-white/10">
+                <i class="fa-solid fa-shield-halved"></i> Equipos y Jugadores
+            </button>
+            <button onclick="switchTab('matches')" data-tab="matches" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-white/5 text-slate-300 hover:bg-white/10">
+                <i class="fa-solid fa-futbol"></i> Partidos y Resultados
+            </button>
+            <button onclick="switchTab('suspended')" data-tab="suspended" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-white/5 text-slate-300 hover:bg-white/10">
+                <i class="fa-solid fa-ban text-rose-400"></i> Sancionados
+                <span id="nav-suspended-badge" class="hidden px-1.5 py-0.2 bg-rose-600 text-white text-xs rounded-full">0</span>
+            </button>
+            <button onclick="switchTab('settings')" data-tab="settings" class="admin-only tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30">
+                <i class="fa-solid fa-palette"></i> Diseño y Admin
+            </button>
+        </nav>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+
+        <!-- PESTAÑA 1: TABLA GENERAL Y GOLEADORES -->
+        <section id="tab-standings" class="tab-content space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="heading-font text-2xl sm:text-3xl font-bold uppercase text-white flex items-center gap-2">
+                        <i class="fa-solid fa-ranking-star text-primary-custom"></i> Tabla de Posiciones
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Clasificación actualizada automáticamente con los resultados de los partidos (o editable por el administrador).</p>
+                </div>
+                <div class="admin-only flex gap-2">
+                    <button onclick="openTeamModal()" class="bg-primary-custom text-slate-950 font-bold px-4 py-2 rounded-xl text-sm shadow-lg hover:brightness-110 transition flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-plus"></i> Agregar Equipo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla Responsiva -->
+            <div class="glass-card rounded-2xl overflow-hidden shadow-2xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-black/40 text-slate-300 text-xs uppercase tracking-wider border-b border-white/10">
+                                <th class="py-3.5 px-4 text-center w-12">#</th>
+                                <th class="py-3.5 px-4">Equipo</th>
+                                <th class="py-3.5 px-3 text-center" title="Partidos Jugados">PJ</th>
+                                <th class="py-3.5 px-3 text-center" title="Ganados">G</th>
+                                <th class="py-3.5 px-3 text-center" title="Empatados">E</th>
+                                <th class="py-3.5 px-3 text-center" title="Perdidos">P</th>
+                                <th class="py-3.5 px-3 text-center hidden sm:table-cell" title="Goles a Favor">GF</th>
+                                <th class="py-3.5 px-3 text-center hidden sm:table-cell" title="Goles en Contra">GC</th>
+                                <th class="py-3.5 px-3 text-center" title="Diferencia de Goles">DG</th>
+                                <th class="py-3.5 px-4 text-center font-extrabold text-white">PTS</th>
+                                <th class="py-3.5 px-4 text-right admin-only">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="standings-tbody" class="divide-y divide-white/5 text-sm">
+                        <!-- Renderizado dinámico -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="empty-standings" class="hidden p-10 text-center text-slate-400">
+                <i class="fa-solid fa-shield text-4xl mb-3 opacity-40"></i>
+                <p>Aún no hay equipos registrados en la liga.</p>
+            </div>
+        </div>
+
+        <!-- Tabla Rápida de Goleadores -->
+        <div class="glass-card rounded-2xl p-5 shadow-xl">
+            <h3 class="heading-font text-xl font-bold uppercase text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-futbol text-primary-custom"></i> Líderes de Goleo
+            </h3>
+            <div id="top-scorers-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Renderizado dinámico -->
+            </div>
+        </div>
+    </section>
+
+    <!-- PESTAÑA 2: EQUIPOS Y REGISTRO DE JUGADORES -->
+        <section id="tab-teams" class="tab-content hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="heading-font text-2xl sm:text-3xl font-bold uppercase text-white flex items-center gap-2">
+                        <i class="fa-solid fa-users text-primary-custom"></i> Clubes y Registro de Jugadores
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Consulta las plantillas oficiales, dorsales y estadísticas individuales de cada equipo.</p>
+                </div>
+                <button onclick="openTeamModal()" class="admin-only bg-primary-custom text-slate-950 font-bold px-4 py-2.5 rounded-xl text-sm shadow-lg hover:brightness-110 transition flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-shield-halved"></i> Nuevo Equipo
+                </button>
+            </div>
+
+            <div id="teams-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Tarjetas de equipos con su lista de jugadores -->
+            </div>
+        </section>
+
+        <!-- PESTAÑA 3: PARTIDOS Y RESULTADOS -->
+        <section id="tab-matches" class="tab-content hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="heading-font text-2xl sm:text-3xl font-bold uppercase text-white flex items-center gap-2">
+                        <i class="fa-regular fa-calendar-check text-primary-custom"></i> Calendario y Resultados
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Marcadores por jornada. Al registrar un resultado finalizado, la tabla general se actualiza.</p>
+                </div>
+                <button onclick="openMatchModal()" class="admin-only bg-primary-custom text-slate-950 font-bold px-4 py-2.5 rounded-xl text-sm shadow-lg hover:brightness-110 transition flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-plus"></i> Programar / Registrar Partido
+                </button>
+            </div>
+
+            <div id="matches-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Partidos renderizados -->
+            </div>
+        </section>
+
+        <!-- PESTAÑA 4: JUGADORES SANCIONADOS -->
+        <section id="tab-suspended" class="tab-content hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="heading-font text-2xl sm:text-3xl font-bold uppercase text-rose-500 flex items-center gap-2">
+                        <i class="fa-solid fa-gavel"></i> Boletín de Jugadores Sancionados
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Control disciplinario oficial: jugadores suspendidos por tarjetas rojas, acumulación o reglamento.</p>
+                </div>
+                <button onclick="openSuspensionModal()" class="admin-only bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-lg transition flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-user-slash"></i> Registrar Sanción
+                </button>
+            </div>
+
+            <div id="suspended-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Tarjetas de sancionados -->
+            </div>
+        </section>
+
+        <!-- PESTAÑA 5: DISEÑO, PERSONALIZACIÓN Y SEGURIDAD ADMIN -->
+        <section id="tab-settings" class="tab-content hidden space-y-6">
+            <div class="glass-card rounded-2xl p-6 space-y-6 border border-amber-500/30">
+                <div class="border-b border-white/10 pb-4">
+                    <h2 class="heading-font text-2xl sm:text-3xl font-bold uppercase text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Personalización Visual de la Liga
+                    </h2>
+                    <p class="text-sm text-slate-300">Cambia la identidad de tu torneo. Todos los espectadores verán estos colores, fuentes y escudo al instante.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Identidad y Escudo -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-lg text-white border-l-4 border-primary-custom pl-3">1. Identidad y Escudo</h3>
+                        <div>
+                            <label class="block text-xs uppercase text-slate-400 mb-1">Nombre de la Liga</label>
+                            <input type="text" id="cfg-league-name" class="w-full bg-slate-900 border border-white/15 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary-custom" placeholder="Ej. Liga Nocturna Street FC">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase text-slate-400 mb-1">Temporada / Torneo</label>
+                            <input type="text" id="cfg-league-season" class="w-full bg-slate-900 border border-white/15 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary-custom" placeholder="Ej. Torneo Apertura 2026">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase text-slate-400 mb-1">Subtítulo o Lema</label>
+                            <input type="text" id="cfg-league-subtitle" class="w-full bg-slate-900 border border-white/15 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary-custom">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase text-slate-400 mb-1">Escudo de la Liga (Subir Imagen o Pegar URL)</label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="file" id="cfg-league-logo-file" accept="image/*" onchange="handleImageUpload(this, 'cfg-league-logo-url')" class="text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-custom file:text-slate-950 hover:file:brightness-110 cursor-pointer">
+                            </div>
+                            <input type="text" id="cfg-league-logo-url" class="mt-2 w-full bg-slate-900 border border-white/15 rounded-xl px-3 py-2 text-xs text-slate-300" placeholder="O pega aquí el enlace directo de una imagen...">
+                        </div>
+                    </div>
+
+                    <!-- Colores y Tipografías Street / Graffiti -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-lg text-white border-l-4 border-secondary-custom pl-3">2. Colores y Fuentes (Incluye Estilo Street/Graffiti)</h3>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Color Principal</label>
+                                <input type="color" id="cfg-color-primary" class="w-full h-11 rounded-xl bg-slate-900 border border-white/15 cursor-pointer p-1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Color Acento</label>
+                                <input type="color" id="cfg-color-secondary" class="w-full h-11 rounded-xl bg-slate-900 border border-white/15 cursor-pointer p-1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Fondo</label>
+                                <input type="color" id="cfg-color-bg" class="w-full h-11 rounded-xl bg-slate-900 border border-white/15 cursor-pointer p-1">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs uppercase text-slate-400 mb-1">Fuente de Títulos y Escudos (¡Nuevas fuentes Street/Graffiti!)</label>
+                            <select id="cfg-font-heading" class="w-full bg-slate-900 border border-white/15 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary-custom">
+                                <optgroup label="🔥 Estilo Street / Graffiti / Urbano">
+                                    <option value="'Permanent Marker', cursive">Permanent Marker (Marcador Urbano)</option>
+                                    <option value="'Rubik Spray Paint', system-ui">Rubik Spray Paint (Graffiti Aerosol)</option>
+                                    <option value="'Sedgwick Ave Display', cursive">Sedgwick Ave (Tag Calle / Street)</option>
+                                    <option value="'Bungee', sans-serif">Bungee (Urbano Bloque)</option>
+                                </optgroup>
+                                <optgroup label="⚽ Estilo Deportivo Profesional">
+                                    <option value="'Oswald', sans-serif">Oswald (Deportivo Clásico)</option>
+                                    <option value="'Montserrat', sans-serif">Montserrat Black (Moderno Pro)</option>
+                                    <option value="'Inter', sans-serif">Inter (Limpio Minimalista)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs uppercase text-slate-400 mb-1">Fuente de Textos y Tablas</label>
+                            <select id="cfg-font-body" class="w-full bg-slate-900 border border-white/15 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary-custom">
+                                <option value="'Inter', sans-serif">Inter (Alta Legibilidad)</option>
+                                <option value="'Montserrat', sans-serif">Montserrat (Geométrica)</option>
+                                <option value="'Oswald', sans-serif">Oswald (Condensada)</option>
+                            </select>
+                        </div>
+
+                        <!-- Vista previa en vivo de la fuente Street -->
+                        <div class="p-4 rounded-xl bg-black/40 border border-white/10">
+                            <span class="text-[10px] uppercase tracking-widest text-slate-400">Vista previa de estilo Street:</span>
+                            <p id="font-preview-text" class="text-2xl mt-1 text-primary-custom" style="font-family: 'Permanent Marker', cursive;">
+                                ¡TORNEO DE BARRIO 100% REAL!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seguridad de Administrador -->
+                <div class="border-t border-white/10 pt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h4 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-amber-400"></i> PIN / Contraseña de Administrador</h4>
+                        <p class="text-xs text-slate-400">Cambia la clave secreta con la que inicias sesión para editar la liga.</p>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <input type="text" id="cfg-admin-pin" class="bg-slate-900 border border-white/15 rounded-xl px-3 py-2 text-sm text-white w-full sm:w-44" placeholder="Nueva clave admin">
+                        <button onclick="saveLeagueSettings()" class="bg-primary-custom text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm shadow-lg hover:brightness-110 transition whitespace-nowrap cursor-pointer">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Diseño
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 py-6 px-4 text-center text-xs text-slate-400 bg-black/30">
+        <p id="footer-league-name" class="font-semibold text-slate-300">Liga de Fútbol Oficial</p>
+        <p class="mt-1">Datos sincronizados en la nube en tiempo real • Modo Espectador Protegido</p>
+    </footer>
+
+    <!-- ================= MODALES ================= -->
+
+    <!-- Modal 1: Acceso Administrador -->
+    <div id="modal-admin-login" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-white/15 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="heading-font text-2xl font-bold uppercase text-white flex items-center gap-2">
+                    <i class="fa-solid fa-shield-cat text-primary-custom"></i> Acceso Administrador
+                </h3>
+                <button onclick="closeModal('modal-admin-login')" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+            </div>
+            <p class="text-sm text-slate-300">Ingresa la contraseña de administrador para desbloquear la edición de equipos, resultados, sancionados y diseño.</p>
+            <div id="first-time-admin-hint" class="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs">
+                <i class="fa-solid fa-circle-info mr-1"></i> Clave inicial por defecto: <strong>admin123</strong> (Puedes cambiarla en "Diseño y Admin" al entrar).
+            </div>
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Contraseña de Administrador</label>
+                <input type="password" id="admin-password-input" onkeydown="if(event.key==='Enter') verifyAdminLogin()" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-custom" placeholder="Escribe tu contraseña...">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-admin-login')" class="px-4 py-2 rounded-xl bg-white/10 text-slate-300 hover:bg-white/20 text-sm cursor-pointer">Cancelar</button>
+                <button onclick="verifyAdminLogin()" class="px-5 py-2 rounded-xl bg-primary-custom text-slate-950 font-bold text-sm hover:brightness-110 cursor-pointer">Desbloquear Edición</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Agregar / Editar Equipo -->
+    <div id="modal-team" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-lg w-full p-6 border border-white/15 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 id="modal-team-title" class="heading-font text-2xl font-bold uppercase text-white">Nuevo Equipo</h3>
+                <button onclick="closeModal('modal-team')" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+            </div>
+            <input type="hidden" id="team-edit-id">
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Nombre del Equipo *</label>
+                <input type="text" id="team-name-input" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-2.5 text-white" placeholder="Ej. Deportivo Barrio Norte">
+            </div>
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Escudo del Equipo (Subir Imagen o URL)</label>
+                <input type="file" accept="image/*" onchange="handleImageUpload(this, 'team-logo-input')" class="text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-custom file:text-slate-950 cursor-pointer">
+                <input type="text" id="team-logo-input" class="mt-2 w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-xs text-slate-300" placeholder="URL del escudo (opcional)">
+            </div>
+            <div class="border-t border-white/10 pt-3">
+                <p class="text-xs text-slate-400 mb-2">Ajuste manual de puntos extra / penalización (opcional):</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] text-slate-400">Puntos Extra (+/-)</label>
+                        <input type="number" id="team-bonus-pts" value="0" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400">Director Técnico / Delegado</label>
+                        <input type="text" id="team-coach-input" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-white text-sm" placeholder="Nombre DT">
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3">
+                <button onclick="closeModal('modal-team')" class="px-4 py-2 rounded-xl bg-white/10 text-slate-300 text-sm cursor-pointer">Cancelar</button>
+                <button onclick="saveTeam()" class="px-5 py-2 rounded-xl bg-primary-custom text-slate-950 font-bold text-sm cursor-pointer">Guardar Equipo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Registrar Jugador en un Equipo -->
+    <div id="modal-player" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-white/15 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="heading-font text-2xl font-bold uppercase text-white">Registrar Jugador</h3>
+                <button onclick="closeModal('modal-player')" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+            </div>
+            <input type="hidden" id="player-team-id">
+            <input type="hidden" id="player-edit-id">
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Nombre Completo del Jugador *</label>
+                <input type="text" id="player-name-input" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-2.5 text-white" placeholder="Ej. Carlos 'El Rayo' Méndez">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs uppercase text-slate-400 mb-1">Dorsal / Número</label>
+                    <input type="number" id="player-number-input" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-2.5 text-white" placeholder="10">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase text-slate-400 mb-1">Posición</label>
+                    <select id="player-position-input" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2.5 text-white">
+                        <option value="Delantero">Delantero</option>
+                        <option value="Mediocampista">Mediocampista</option>
+                        <option value="Defensa">Defensa</option>
+                        <option value="Portero">Portero</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+                <div>
+                    <label class="block text-[11px] text-sky-400" title="Partidos asistidos">Asist. Partidos</label>
+                    <input type="number" id="player-attendance-input" value="0" min="0" class="w-full bg-slate-950 border border-white/20 rounded-xl px-2.5 py-2 text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-[11px] text-emerald-400">Goles</label>
+                    <input type="number" id="player-goals-input" value="0" min="0" class="w-full bg-slate-950 border border-white/20 rounded-xl px-2.5 py-2 text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-[11px] text-amber-400">Amarillas</label>
+                    <input type="number" id="player-yellow-input" value="0" min="0" class="w-full bg-slate-950 border border-white/20 rounded-xl px-2.5 py-2 text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-[11px] text-rose-400">Rojas</label>
+                    <input type="number" id="player-red-input" value="0" min="0" class="w-full bg-slate-950 border border-white/20 rounded-xl px-2.5 py-2 text-white text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-player')" class="px-4 py-2 rounded-xl bg-white/10 text-slate-300 text-sm cursor-pointer">Cancelar</button>
+                <button onclick="savePlayer()" class="px-5 py-2 rounded-xl bg-primary-custom text-slate-950 font-bold text-sm cursor-pointer">Guardar Jugador</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Programar / Registrar Partido -->
+    <div id="modal-match" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-lg w-full p-6 border border-white/15 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="heading-font text-2xl font-bold uppercase text-white">Partido / Resultado</h3>
+                <button onclick="closeModal('modal-match')" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+            </div>
+            <input type="hidden" id="match-edit-id">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs uppercase text-slate-400 mb-1">Jornada</label>
+                    <input type="text" id="match-round-input" value="Jornada 1" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase text-slate-400 mb-1">Fecha / Hora</label>
+                    <input type="text" id="match-date-input" placeholder="Sábado 18:00 hrs" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-white text-sm">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-11 items-center gap-2 bg-black/30 p-3 rounded-xl border border-white/10">
+                <div class="col-span-5">
+                    <label class="block text-[11px] text-slate-400 mb-1">Local</label>
+                    <select id="match-home-team" class="w-full bg-slate-900 border border-white/20 rounded-lg px-2 py-2 text-white text-sm"></select>
+                    <input type="number" id="match-home-score" value="0" min="0" class="mt-2 w-full bg-slate-950 border border-white/20 rounded-lg px-2 py-1.5 text-center font-bold text-lg text-white">
+                </div>
+                <div class="col-span-1 text-center font-bold text-slate-500">VS</div>
+                <div class="col-span-5">
+                    <label class="block text-[11px] text-slate-400 mb-1">Visitante</label>
+                    <select id="match-away-team" class="w-full bg-slate-900 border border-white/20 rounded-lg px-2 py-2 text-white text-sm"></select>
+                    <input type="number" id="match-away-score" value="0" min="0" class="mt-2 w-full bg-slate-950 border border-white/20 rounded-lg px-2 py-1.5 text-center font-bold text-lg text-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Estado del Partido</label>
+                <select id="match-status-input" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-2.5 text-white">
+                    <option value="finished">Finalizado (Cuenta para la Tabla General)</option>
+                    <option value="scheduled">Programado (Aún no se juega)</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-match')" class="px-4 py-2 rounded-xl bg-white/10 text-slate-300 text-sm cursor-pointer">Cancelar</button>
+                <button onclick="saveMatch()" class="px-5 py-2 rounded-xl bg-primary-custom text-slate-950 font-bold text-sm cursor-pointer">Guardar Partido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Registrar Sanción -->
+    <div id="modal-suspension" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-rose-500/30 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="heading-font text-2xl font-bold uppercase text-rose-500">Registrar Sanción</h3>
+                <button onclick="closeModal('modal-suspension')" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+            </div>
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Equipo del Jugador *</label>
+                <select id="susp-team-select" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-2.5 text-white"></select>
+            </div>
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Nombre del Jugador Sancionado *</label>
+                <input type="text" id="susp-player-name" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-2.5 text-white" placeholder="Nombre y dorsal del jugador">
+            </div>
+            <div>
+                <label class="block text-xs uppercase text-slate-400 mb-1">Motivo de Sanción</label>
+                <select id="susp-reason" class="w-full bg-slate-950 border border-white/20 rounded-xl px-4 py-2.5 text-white">
+                    <option value="Tarjeta Roja Directa">🟥 Tarjeta Roja Directa</option>
+                    <option value="Doble Amarilla">🟨🟥 Doble Amarilla</option>
+                    <option value="Acumulación de Tarjetas">🟨 Acumulación de Amarillas</option>
+                    <option value="Conducta Antideportiva">⚠️ Conducta Antideportiva</option>
+                    <option value="Falta al Reglamento">📋 Falta al Reglamento</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs uppercase text-slate-400 mb-1">Partidos de Castigo</label>
+                    <input type="text" id="susp-games" value="1 Partido" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase text-slate-400 mb-1">Estado</label>
+                    <select id="susp-status" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-white">
+                        <option value="Activo">Suspendido (Activo)</option>
+                        <option value="Cumplido">Sanción Cumplida</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-suspension')" class="px-4 py-2 rounded-xl bg-white/10 text-slate-300 text-sm cursor-pointer">Cancelar</button>
+                <button onclick="saveSuspension()" class="px-5 py-2 rounded-xl bg-rose-600 text-white font-bold text-sm cursor-pointer">Publicar Sanción</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK & Lógica Principal -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración de Firebase del entorno
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'liga-futbol-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let isAdminMode = false;
+
+        // Estado central de la Liga
+        let leagueState = {
+            settings: {
+                name: "LIGA STREET SOCCER",
+                season: "Torneo Oficial 2026",
+                subtitle: "Pasión en cada cancha • Resultados, plantillas y disciplina en vivo.",
+                logo: "https://placehold.co/200x200/10b981/0f172a?text=FC",
+                primaryColor: "#10b981",
+                secondaryColor: "#f59e0b",
+                bgColor: "#0f172a",
+                headingFont: "'Permanent Marker', cursive",
+                bodyFont: "'Inter', sans-serif",
+                adminPin: "admin123"
+            },
+            teams: [
+                {
+                    id: "t1",
+                    name: "Real Barrio FC",
+                    logo: "https://placehold.co/150x150/10b981/ffffff?text=RB",
+                    coach: "DT Marcos Silva",
+                    bonusPts: 0,
+                    players: [
+                        { id: "p1", name: "Mateo 'Tigre' Ruiz", number: 9, position: "Delantero", attendance: 4, goals: 5, yellow: 1, red: 0 },
+                        { id: "p2", name: "Diego Herrera", number: 10, position: "Mediocampista", attendance: 4, goals: 2, yellow: 0, red: 0 }
+                    ]
+                },
+                {
+                    id: "t2",
+                    name: "Atlético Callejero",
+                    logo: "https://placehold.co/150x150/f59e0b/0f172a?text=AC",
+                    coach: "DT Luis Gómez",
+                    bonusPts: 0,
+                    players: [
+                        { id: "p3", name: "Kevin Morales", number: 7, position: "Delantero", attendance: 3, goals: 4, yellow: 2, red: 0 },
+                        { id: "p4", name: "Andrés Vega", number: 1, position: "Portero", attendance: 4, goals: 0, yellow: 0, red: 0 }
+                    ]
+                }
+            ],
+            matches: [
+                {
+                    id: "m1",
+                    round: "Jornada 1",
+                    date: "Domingo 16:00 hrs",
+                    homeId: "t1",
+                    awayId: "t2",
+                    homeScore: 3,
+                    awayScore: 2,
+                    status: "finished"
+                }
+            ],
+            suspensions: [
+                {
+                    id: "s1",
+                    teamId: "t2",
+                    playerName: "Kevin Morales (#7)",
+                    reason: "Acumulación de Tarjetas",
+                    games: "1 Partido",
+                    status: "Activo"
+                }
+            ]
+        };
+
+        // Inicialización de Firebase y Autenticación (Regla 3: Auth antes de Firestore)
+        async function initApp() {
+            if (!firebaseConfig) {
+                updateConnectionStatus(false, "Modo demostración local");
+                renderAll();
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        listenToLeagueData();
+                    }
+                });
+            } catch (error) {
+                console.error("Error inicializando Firebase:", error);
+                updateConnectionStatus(false, "Error de conexión");
+                renderAll();
+            }
+        }
+
+        // Escuchar documento público compartido de la liga (Regla 1: /artifacts/{appId}/public/data/{collection})
+        function listenToLeagueData() {
+            if (!db || !currentUser) return;
+            const leagueDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'league_state', 'main');
+
+            onSnapshot(leagueDocRef, (snapshot) => {
+                updateConnectionStatus(true, "Sincronizado en vivo");
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    leagueState = {
+                        settings: { ...leagueState.settings, ...(data.settings || {}) },
+                        teams: data.teams || [],
+                        matches: data.matches || [],
+                        suspensions: data.suspensions || []
+                    };
+                } else {
+                    // Crear documento inicial si aún no existe
+                    persistState();
+                }
+                renderAll();
+            }, (error) => {
+                console.error("Error leyendo Firestore:", error);
+                updateConnectionStatus(false, "Error de lectura");
+            });
+        }
+
+        // Guardar estado completo en Firestore (Solo si isAdminMode o inicialización)
+        async function persistState() {
+            renderAll();
+            if (!db || !currentUser) return;
+            try {
+                const leagueDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'league_state', 'main');
+                await setDoc(leagueDocRef, leagueState);
+            } catch (err) {
+                console.error("Error guardando cambios:", err);
+                showToast("Error al guardar en la nube", "error");
+            }
+        }
+
+        function updateConnectionStatus(online, text) {
+            const dot = document.getElementById('connection-dot');
+            const label = document.getElementById('connection-status');
+            dot.className = online ? "w-2.5 h-2.5 rounded-full bg-emerald-400" : "w-2.5 h-2.5 rounded-full bg-rose-500";
+            label.textContent = text;
+        }
+
+        // ================= CONTROL DE ACCESO ADMIN =================
+        window.openAdminModal = () => {
+            document.getElementById('admin-password-input').value = '';
+            openModal('modal-admin-login');
+            setTimeout(() => document.getElementById('admin-password-input').focus(), 100);
+        };
+
+        window.verifyAdminLogin = () => {
+            const input = document.getElementById('admin-password-input').value.trim();
+            const currentPin = leagueState.settings.adminPin || "admin123";
+            if (input === currentPin) {
+                isAdminMode = true;
+                document.body.classList.add('is-admin');
+                document.getElementById('role-badge').innerHTML = '<i class="fa-solid fa-crown text-amber-400 mr-1"></i> Modo Administrador';
+                document.getElementById('role-badge').className = "px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold";
+                document.getElementById('btn-open-admin-modal').classList.add('hidden');
+                document.getElementById('btn-logout-admin').classList.remove('hidden');
+                closeModal('modal-admin-login');
+                showToast("¡Bienvenido Administrador! Ya puedes editar la liga.", "success");
+            } else {
+                showToast("Contraseña incorrecta. Solo el administrador puede editar.", "error");
+            }
+        };
+
+        window.logoutAdmin = () => {
+            isAdminMode = false;
+            document.body.classList.remove('is-admin');
+            document.getElementById('role-badge').innerHTML = '<i class="fa-solid fa-eye mr-1"></i> Modo Espectador';
+            document.getElementById('role-badge').className = "px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-white/10 font-medium";
+            document.getElementById('btn-open-admin-modal').classList.remove('hidden');
+            document.getElementById('btn-logout-admin').classList.add('hidden');
+            switchTab('standings');
+            showToast("Has vuelto al Modo Espectador (Solo lectura).", "info");
+        };
+
+        // ================= RENDERIZADO DE INTERFAZ =================
+        function renderAll() {
+            applyThemeSettings();
+            renderStandings();
+            renderTopScorers();
+            renderTeamsAndPlayers();
+            renderMatches();
+            renderSuspensions();
+            updateCounters();
+        }
+
+        function applyThemeSettings() {
+            const s = leagueState.settings;
+            document.documentElement.style.setProperty('--primary-color', s.primaryColor);
+            document.documentElement.style.setProperty('--secondary-color', s.secondaryColor);
+            document.documentElement.style.setProperty('--bg-color', s.bgColor);
+            document.documentElement.style.setProperty('--font-heading', s.headingFont);
+            document.documentElement.style.setProperty('--font-body', s.bodyFont);
+
+            document.getElementById('league-name-display').textContent = s.name;
+            document.getElementById('footer-league-name').textContent = s.name;
+            document.getElementById('league-season-display').textContent = s.season;
+            document.getElementById('league-subtitle-display').textContent = s.subtitle;
+            document.getElementById('league-logo-img').src = s.logo || "https://placehold.co/200x200/10b981/ffffff?text=FC";
+
+            // Llenar inputs de configuración
+            document.getElementById('cfg-league-name').value = s.name;
+            document.getElementById('cfg-league-season').value = s.season;
+            document.getElementById('cfg-league-subtitle').value = s.subtitle;
+            document.getElementById('cfg-league-logo-url').value = s.logo;
+            document.getElementById('cfg-color-primary').value = s.primaryColor;
+            document.getElementById('cfg-color-secondary').value = s.secondaryColor;
+            document.getElementById('cfg-color-bg').value = s.bgColor;
+            document.getElementById('cfg-font-heading').value = s.headingFont;
+            document.getElementById('cfg-font-body').value = s.bodyFont;
+            document.getElementById('cfg-admin-pin').value = s.adminPin;
+            document.getElementById('font-preview-text').style.fontFamily = s.headingFont;
+        }
+
+        // Vista previa instantánea al cambiar select de fuente en configuración
+        document.getElementById('cfg-font-heading').addEventListener('change', (e) => {
+            document.getElementById('font-preview-text').style.fontFamily = e.target.value;
+        });
+
+        // Calcular y renderizar Tabla General
+        function renderStandings() {
+            const tbody = document.getElementById('standings-tbody');
+            const emptyState = document.getElementById('empty-standings');
+
+            if (leagueState.teams.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            // Calcular estadísticas a partir de partidos finalizados
+            const statsMap = {};
+            leagueState.teams.forEach(t => {
+                statsMap[t.id] = {
+                    team: t,
+                    pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dg: 0,
+                    pts: Number(t.bonusPts || 0)
+                };
+            });
+
+            leagueState.matches.filter(m => m.status === 'finished').forEach(m => {
+                const home = statsMap[m.homeId];
+                const away = statsMap[m.awayId];
+                if (!home || !away) return;
+
+                const hs = Number(m.homeScore);
+                const as = Number(m.awayScore);
+
+                home.pj++; away.pj++;
+                home.gf += hs; home.gc += as;
+                away.gf += as; away.gc += hs;
+
+                if (hs > as) {
+                    home.g++; home.pts += 3;
+                    away.p++;
+                } else if (hs < as) {
+                    away.g++; away.pts += 3;
+                    home.p++;
+                } else {
+                    home.e++; home.pts += 1;
+                    away.e++; away.pts += 1;
+                }
+            });
+
+            const sorted = Object.values(statsMap).map(s => {
+                s.dg = s.gf - s.gc;
+                return s;
+            }).sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
+
+            tbody.innerHTML = sorted.map((row, index) => {
+                const pos = index + 1;
+                let badgeClass = "bg-white/10 text-slate-300";
+                if (pos === 1) badgeClass = "bg-amber-400 text-slate-950 font-extrabold";
+                else if (pos <= 4) badgeClass = "bg-primary-custom text-slate-950 font-bold";
+
+                return `
+                    <tr class="hover:bg-white/5 transition">
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-xs ${badgeClass}">${pos}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${row.team.logo || 'https://placehold.co/80x80/1e293b/ffffff?text=FC'}" alt="${row.team.name}" class="w-9 h-9 rounded-lg object-contain bg-slate-900 p-1 border border-white/10" onerror="this.src='https://placehold.co/80x80/1e293b/ffffff?text=FC'">
+                                <div>
+                                    <div class="font-bold text-white text-sm sm:text-base">${escapeHtml(row.team.name)}</div>
+                                    ${row.team.bonusPts ? `<span class="text-[10px] text-amber-400">Ajuste pts: ${row.team.bonusPts > 0 ? '+' : ''}${row.team.bonusPts}</span>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-3 text-center text-slate-300">${row.pj}</td>
+                        <td class="py-3.5 px-3 text-center text-emerald-400 font-medium">${row.g}</td>
+                        <td class="py-3.5 px-3 text-center text-slate-400">${row.e}</td>
+                        <td class="py-3.5 px-3 text-center text-rose-400">${row.p}</td>
+                        <td class="py-3.5 px-3 text-center hidden sm:table-cell text-slate-300">${row.gf}</td>
+                        <td class="py-3.5 px-3 text-center hidden sm:table-cell text-slate-300">${row.gc}</td>
+                        <td class="py-3.5 px-3 text-center font-semibold ${row.dg > 0 ? 'text-emerald-400' : row.dg < 0 ? 'text-rose-400' : 'text-slate-400'}">${row.dg > 0 ? '+' : ''}${row.dg}</td>
+                        <td class="py-3.5 px-4 text-center font-black text-base sm:text-lg text-white">${row.pts}</td>
+                        <td class="py-3.5 px-4 text-right admin-only">
+                            <button onclick="openTeamModal('${row.team.id}')" class="p-1.5 text-slate-300 hover:text-amber-400 cursor-pointer" title="Editar Equipo"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteTeam('${row.team.id}')" class="p-1.5 text-slate-300 hover:text-rose-500 cursor-pointer" title="Eliminar Equipo"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderTopScorers() {
+            const container = document.getElementById('top-scorers-list');
+            const allPlayers = [];
+            leagueState.teams.forEach(team => {
+                (team.players || []).forEach(p => {
+                    if (Number(p.goals) > 0) {
+                        allPlayers.push({ ...p, teamName: team.name, teamLogo: team.logo });
+                    }
+                });
+            });
+            allPlayers.sort((a, b) => b.goals - a.goals);
+
+            if (allPlayers.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 col-span-full">Aún no hay goles individuales registrados en las plantillas.</p>`;
+                return;
+            }
+
+            container.innerHTML = allPlayers.slice(0, 8).map((p, idx) => `
+                <div class="bg-slate-900/80 border border-white/10 rounded-xl p-3 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="text-xs font-bold text-slate-500 w-4">${idx + 1}.</span>
+                        <img src="${p.teamLogo || 'https://placehold.co/60x60/1e293b/ffffff?text=FC'}" class="w-8 h-8 rounded-lg object-contain bg-black/40 p-0.5">
+                        <div class="truncate">
+                            <div class="text-sm font-bold text-white truncate">${escapeHtml(p.name)}</div>
+                            <div class="text-[11px] text-slate-400 truncate">${escapeHtml(p.teamName)} • #${p.number || '-'}</div>
+                        </div>
+                    </div>
+                    <div class="px-2.5 py-1 rounded-lg bg-primary-custom/20 text-primary-custom font-extrabold text-sm whitespace-nowrap">
+                        ${p.goals} <i class="fa-solid fa-futbol text-xs"></i>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Renderizar Equipos y Registro de Jugadores
+        function renderTeamsAndPlayers() {
+            const grid = document.getElementById('teams-grid');
+            if (leagueState.teams.length === 0) {
+                grid.innerHTML = `<div class="col-span-full glass-card rounded-2xl p-10 text-center text-slate-400">No hay equipos registrados todavía.</div>`;
+                return;
+            }
+
+            grid.innerHTML = leagueState.teams.map(team => {
+                const players = team.players || [];
+                return `
+                    <div class="glass-card rounded-2xl overflow-hidden border border-white/10 flex flex-col">
+                        <!-- Cabecera del Equipo -->
+                        <div class="p-4 bg-black/40 border-b border-white/10 flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${team.logo || 'https://placehold.co/100x100/1e293b/ffffff?text=FC'}" alt="${team.name}" class="w-14 h-14 rounded-xl object-contain bg-slate-900 p-1.5 border border-primary-custom/50" onerror="this.src='https://placehold.co/100x100/1e293b/ffffff?text=FC'">
+                                <div>
+                                    <h3 class="heading-font text-xl font-bold uppercase text-white">${escapeHtml(team.name)}</h3>
+                                    <p class="text-xs text-slate-400">${team.coach ? escapeHtml(team.coach) + ' • ' : ''}${players.length} Jugadores registrados</p>
+                                </div>
+                            </div>
+                            <div class="admin-only flex items-center gap-1.5">
+                                <button onclick="openPlayerModal('${team.id}')" class="bg-primary-custom text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs hover:brightness-110 transition cursor-pointer">
+                                    <i class="fa-solid fa-user-plus mr-1"></i> Jugador
+                                </button>
+                                <button onclick="openTeamModal('${team.id}')" class="p-2 rounded-lg bg-white/10 text-slate-300 hover:text-white cursor-pointer" title="Editar Club">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="deleteTeam('${team.id}')" class="p-2 rounded-lg bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 cursor-pointer" title="Eliminar Club">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Jugadores -->
+                        <div class="p-4 flex-grow">
+                            ${players.length === 0 ? `
+                                <p class="text-xs text-slate-400 text-center py-4">Sin jugadores registrados en esta plantilla.</p>
+                            ` : `
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left text-xs">
+                                        <thead>
+                                            <tr class="text-slate-400 border-b border-white/10">
+                                                <th class="pb-2 w-8">#</th>
+                                                <th class="pb-2">Jugador</th>
+                                                <th class="pb-2 hidden sm:table-cell">Posición</th>
+                                                <th class="pb-2 text-center text-sky-300" title="Asistencias a Partidos">Asist. Partidos</th>
+                                                <th class="pb-2 text-center" title="Goles">G</th>
+                                                <th class="pb-2 text-center">Tarjetas</th>
+                                                <th class="pb-2 text-right admin-only"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-white/5">
+                                            ${players.map(p => {
+                                                const att = p.attendance !== undefined ? p.attendance : (p.assists || 0);
+                                                return `
+                                                <tr class="hover:bg-white/5">
+                                                    <td class="py-2 font-bold text-primary-custom">${p.number || '-'}</td>
+                                                    <td class="py-2 font-semibold text-white">
+                                                        <div>${escapeHtml(p.name)}</div>
+                                                        <div class="text-[10px] text-slate-400 sm:hidden">${escapeHtml(p.position || '')}</div>
+                                                    </td>
+                                                    <td class="py-2 text-slate-400 hidden sm:table-cell">${escapeHtml(p.position || '')}</td>
+                                                    <td class="py-2 text-center">
+                                                        <div class="inline-flex items-center justify-center gap-1.5 bg-sky-500/10 border border-sky-500/20 rounded-lg px-2 py-0.5">
+                                                            <button onclick="updatePlayerAttendance('${team.id}', '${p.id}', -1)" class="admin-only w-5 h-5 rounded bg-white/10 hover:bg-rose-500/30 text-slate-300 hover:text-white flex items-center justify-center font-bold cursor-pointer" title="Restar asistencia a partido">-</button>
+                                                            <span class="font-bold text-sky-400 min-w-[1.25rem] text-center">${att}</span>
+                                                            <button onclick="updatePlayerAttendance('${team.id}', '${p.id}', 1)" class="admin-only w-5 h-5 rounded bg-sky-500/30 hover:bg-sky-500/50 text-sky-200 flex items-center justify-center font-bold cursor-pointer" title="Sumar asistencia a partido">+</button>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 text-center font-bold text-emerald-400">${p.goals || 0}</td>
+                                                    <td class="py-2 text-center">
+                                                        ${p.yellow ? `<span class="inline-block px-1.5 py-0.2 bg-amber-400 text-slate-950 font-bold rounded text-[10px] mr-1">${p.yellow}</span>` : ''}
+                                                        ${p.red ? `<span class="inline-block px-1.5 py-0.2 bg-rose-600 text-white font-bold rounded text-[10px]">${p.red}</span>` : ''}
+                                                        ${!p.yellow && !p.red ? '<span class="text-slate-600">-</span>' : ''}
+                                                    </td>
+                                                    <td class="py-2 text-right admin-only whitespace-nowrap">
+                                                        <button onclick="openPlayerModal('${team.id}', '${p.id}')" class="text-slate-400 hover:text-amber-400 px-1 cursor-pointer"><i class="fa-solid fa-pen"></i></button>
+                                                        <button onclick="deletePlayer('${team.id}', '${p.id}')" class="text-slate-400 hover:text-rose-500 px-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                                                    </td>
+                                                </tr>
+                                            `}).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Renderizar Partidos
+        function renderMatches() {
+            const list = document.getElementById('matches-list');
+            if (leagueState.matches.length === 0) {
+                list.innerHTML = `<div class="col-span-full glass-card rounded-2xl p-10 text-center text-slate-400">No hay partidos programados ni resultados registrados aún.</div>`;
+                return;
+            }
+
+            list.innerHTML = [...leagueState.matches].reverse().map(m => {
+                const home = leagueState.teams.find(t => t.id === m.homeId) || { name: 'Equipo Local', logo: '' };
+                const away = leagueState.teams.find(t => t.id === m.awayId) || { name: 'Equipo Visitante', logo: '' };
+                const isFinished = m.status === 'finished';
+
+                return `
+                    <div class="glass-card rounded-2xl p-4 border border-white/10 flex flex-col justify-between gap-3">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold uppercase tracking-wider text-secondary-custom">${escapeHtml(m.round || 'Jornada')}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-400">${escapeHtml(m.date || '')}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${isFinished ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">
+                                    ${isFinished ? 'Finalizado' : 'Programado'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-11 items-center gap-2 py-2">
+                            <div class="col-span-4 flex flex-col items-center text-center gap-1.5">
+                                <img src="${home.logo || 'https://placehold.co/80x80/1e293b/ffffff?text=FC'}" class="w-12 h-12 rounded-xl object-contain bg-slate-900 p-1">
+                                <span class="font-bold text-xs sm:text-sm text-white line-clamp-1">${escapeHtml(home.name)}</span>
+                            </div>
+
+                            <div class="col-span-3 flex items-center justify-center gap-2">
+                                ${isFinished ? `
+                                    <span class="heading-font text-2xl sm:text-3xl font-black text-white bg-black/50 px-3 py-1 rounded-xl border border-white/10">${m.homeScore}</span>
+                                    <span class="text-slate-500 font-bold">-</span>
+                                    <span class="heading-font text-2xl sm:text-3xl font-black text-white bg-black/50 px-3 py-1 rounded-xl border border-white/10">${m.awayScore}</span>
+                                ` : `
+                                    <span class="heading-font text-xl font-bold text-slate-400 bg-black/40 px-3 py-1 rounded-xl">VS</span>
+                                `}
+                            </div>
+
+                            <div class="col-span-4 flex flex-col items-center text-center gap-1.5">
+                                <img src="${away.logo || 'https://placehold.co/80x80/1e293b/ffffff?text=FC'}" class="w-12 h-12 rounded-xl object-contain bg-slate-900 p-1">
+                                <span class="font-bold text-xs sm:text-sm text-white line-clamp-1">${escapeHtml(away.name)}</span>
+                            </div>
+                        </div>
+
+                        <div class="admin-only border-t border-white/10 pt-2 flex justify-end gap-2">
+                            <button onclick="openMatchModal('${m.id}')" class="text-xs px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer">
+                                <i class="fa-solid fa-pen mr-1"></i> Editar Marcador
+                            </button>
+                            <button onclick="deleteMatch('${m.id}')" class="text-xs px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 cursor-pointer">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Renderizar Sancionados
+        function renderSuspensions() {
+            const grid = document.getElementById('suspended-grid');
+            if (leagueState.suspensions.length === 0) {
+                grid.innerHTML = `<div class="col-span-full glass-card rounded-2xl p-10 text-center text-slate-400"><i class="fa-solid fa-check-circle text-3xl text-emerald-400 mb-2"></i><p>¡Juego limpio! No hay jugadores sancionados actualmente.</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = leagueState.suspensions.map(s => {
+                const team = leagueState.teams.find(t => t.id === s.teamId) || { name: 'Equipo', logo: '' };
+                const isActive = s.status === 'Activo';
+                return `
+                    <div class="glass-card rounded-2xl p-5 border ${isActive ? 'border-rose-500/40 bg-rose-950/10' : 'border-white/10 opacity-75'} flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${team.logo || 'https://placehold.co/80x80/1e293b/ffffff?text=FC'}" class="w-12 h-12 rounded-xl object-contain bg-slate-900 p-1 border border-white/10">
+                                <div>
+                                    <span class="text-[11px] uppercase font-bold tracking-wider text-slate-400">${escapeHtml(team.name)}</span>
+                                    <h4 class="font-bold text-lg text-white leading-tight">${escapeHtml(s.playerName)}</h4>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase ${isActive ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-500/20 text-emerald-300'}">
+                                ${escapeHtml(s.status)}
+                            </span>
+                        </div>
+
+                        <div class="bg-black/40 rounded-xl p-3 space-y-1.5 text-xs">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Motivo:</span>
+                                <span class="font-semibold text-rose-300">${escapeHtml(s.reason)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Suspensión:</span>
+                                <span class="font-bold text-white">${escapeHtml(s.games)}</span>
+                            </div>
+                        </div>
+
+                        <div class="admin-only flex justify-between items-center pt-1">
+                            <button onclick="toggleSuspensionStatus('${s.id}')" class="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer">
+                                <i class="fa-solid fa-rotate mr-1"></i> Cambiar Estado
+                            </button>
+                            <button onclick="deleteSuspension('${s.id}')" class="text-xs px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 cursor-pointer">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateCounters() {
+            document.getElementById('stat-teams-count').textContent = leagueState.teams.length;
+            document.getElementById('stat-matches-count').textContent = leagueState.matches.length;
+            const activeSusp = leagueState.suspensions.filter(s => s.status === 'Activo').length;
+            document.getElementById('stat-suspended-count').textContent = activeSusp;
+
+            const badge = document.getElementById('nav-suspended-badge');
+            if (activeSusp > 0) {
+                badge.textContent = activeSusp;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // ================= ACCIONES CRUD (ADMIN) =================
+
+        // Guardar Diseño y Configuración
+        window.saveLeagueSettings = () => {
+            if (!isAdminMode) return;
+            leagueState.settings.name = document.getElementById('cfg-league-name').value.trim() || "MI LIGA DE FÚTBOL";
+            leagueState.settings.season = document.getElementById('cfg-league-season').value.trim() || "Temporada 2026";
+            leagueState.settings.subtitle = document.getElementById('cfg-league-subtitle').value.trim();
+            leagueState.settings.logo = document.getElementById('cfg-league-logo-url').value.trim();
+            leagueState.settings.primaryColor = document.getElementById('cfg-color-primary').value;
+            leagueState.settings.secondaryColor = document.getElementById('cfg-color-secondary').value;
+            leagueState.settings.bgColor = document.getElementById('cfg-color-bg').value;
+            leagueState.settings.headingFont = document.getElementById('cfg-font-heading').value;
+            leagueState.settings.bodyFont = document.getElementById('cfg-font-body').value;
+
+            const newPin = document.getElementById('cfg-admin-pin').value.trim();
+            if (newPin.length >= 4) {
+                leagueState.settings.adminPin = newPin;
+            }
+
+            persistState();
+            showToast("Diseño y configuración guardados en vivo.", "success");
+        };
+
+        // Equipos
+        window.openTeamModal = (teamId = null) => {
+            if (!isAdminMode) return;
+            document.getElementById('team-edit-id').value = teamId || '';
+            if (teamId) {
+                const t = leagueState.teams.find(x => x.id === teamId);
+                document.getElementById('modal-team-title').textContent = "Editar Equipo";
+                document.getElementById('team-name-input').value = t.name;
+                document.getElementById('team-logo-input').value = t.logo || '';
+                document.getElementById('team-bonus-pts').value = t.bonusPts || 0;
+                document.getElementById('team-coach-input').value = t.coach || '';
+            } else {
+                document.getElementById('modal-team-title').textContent = "Nuevo Equipo";
+                document.getElementById('team-name-input').value = '';
+                document.getElementById('team-logo-input').value = '';
+                document.getElementById('team-bonus-pts').value = 0;
+                document.getElementById('team-coach-input').value = '';
+            }
+            openModal('modal-team');
+        };
+
+        window.saveTeam = () => {
+            if (!isAdminMode) return;
+            const id = document.getElementById('team-edit-id').value;
+            const name = document.getElementById('team-name-input').value.trim();
+            if (!name) return showToast("Escribe el nombre del equipo", "error");
+
+            const logo = document.getElementById('team-logo-input').value.trim() || `https://placehold.co/150x150/10b981/ffffff?text=${encodeURIComponent(name.substring(0,2).toUpperCase())}`;
+            const bonusPts = parseInt(document.getElementById('team-bonus-pts').value) || 0;
+            const coach = document.getElementById('team-coach-input').value.trim();
+
+            if (id) {
+                const idx = leagueState.teams.findIndex(t => t.id === id);
+                if (idx !== -1) {
+                    leagueState.teams[idx] = { ...leagueState.teams[idx], name, logo, bonusPts, coach };
+                }
+            } else {
+                leagueState.teams.push({
+                    id: 'team_' + Date.now(),
+                    name, logo, bonusPts, coach,
+                    players: []
+                });
+            }
+            closeModal('modal-team');
+            persistState();
+            showToast("Equipo guardado correctamente", "success");
+        };
+
+        window.deleteTeam = (teamId) => {
+            if (!isAdminMode) return;
+            leagueState.teams = leagueState.teams.filter(t => t.id !== teamId);
+            persistState();
+            showToast("Equipo eliminado", "info");
+        };
+
+        // Jugadores
+        window.openPlayerModal = (teamId, playerId = null) => {
+            if (!isAdminMode) return;
+            document.getElementById('player-team-id').value = teamId;
+            document.getElementById('player-edit-id').value = playerId || '';
+            const team = leagueState.teams.find(t => t.id === teamId);
+            if (playerId && team) {
+                const p = (team.players || []).find(x => x.id === playerId);
+                document.getElementById('player-name-input').value = p.name;
+                document.getElementById('player-number-input').value = p.number || '';
+                document.getElementById('player-position-input').value = p.position || 'Delantero';
+                document.getElementById('player-attendance-input').value = p.attendance !== undefined ? p.attendance : (p.assists || 0);
+                document.getElementById('player-goals-input').value = p.goals || 0;
+                document.getElementById('player-yellow-input').value = p.yellow || 0;
+                document.getElementById('player-red-input').value = p.red || 0;
+            } else {
+                document.getElementById('player-name-input').value = '';
+                document.getElementById('player-number-input').value = '';
+                document.getElementById('player-position-input').value = 'Delantero';
+                document.getElementById('player-attendance-input').value = 0;
+                document.getElementById('player-goals-input').value = 0;
+                document.getElementById('player-yellow-input').value = 0;
+                document.getElementById('player-red-input').value = 0;
+            }
+            openModal('modal-player');
+        };
+
+        window.savePlayer = () => {
+            if (!isAdminMode) return;
+            const teamId = document.getElementById('player-team-id').value;
+            const playerId = document.getElementById('player-edit-id').value;
+            const name = document.getElementById('player-name-input').value.trim();
+            if (!name) return showToast("Ingresa el nombre del jugador", "error");
+
+            const team = leagueState.teams.find(t => t.id === teamId);
+            if (!team) return;
+            if (!team.players) team.players = [];
+
+            const playerData = {
+                id: playerId || 'ply_' + Date.now(),
+                name,
+                number: document.getElementById('player-number-input').value,
+                position: document.getElementById('player-position-input').value,
+                attendance: parseInt(document.getElementById('player-attendance-input').value) || 0,
+                goals: parseInt(document.getElementById('player-goals-input').value) || 0,
+                yellow: parseInt(document.getElementById('player-yellow-input').value) || 0,
+                red: parseInt(document.getElementById('player-red-input').value) || 0
+            };
+
+            if (playerId) {
+                const idx = team.players.findIndex(p => p.id === playerId);
+                if (idx !== -1) team.players[idx] = playerData;
+            } else {
+                team.players.push(playerData);
+            }
+
+            closeModal('modal-player');
+            persistState();
+            showToast("Jugador registrado en la plantilla", "success");
+        };
+
+        window.updatePlayerAttendance = (teamId, playerId, delta) => {
+            if (!isAdminMode) return;
+            const team = leagueState.teams.find(t => t.id === teamId);
+            if (!team) return;
+            const player = (team.players || []).find(p => p.id === playerId);
+            if (!player) return;
+            const current = player.attendance !== undefined ? Number(player.attendance) : Number(player.assists || 0);
+            player.attendance = Math.max(0, current + delta);
+            persistState();
+        };
+
+        window.deletePlayer = (teamId, playerId) => {
+            if (!isAdminMode) return;
+            const team = leagueState.teams.find(t => t.id === teamId);
+            if (!team) return;
+            team.players = (team.players || []).filter(p => p.id !== playerId);
+            persistState();
+            showToast("Jugador eliminado de la plantilla", "info");
+        };
+
+        // Partidos
+        window.openMatchModal = (matchId = null) => {
+            if (!isAdminMode) return;
+            if (leagueState.teams.length < 2) {
+                return showToast("Necesitas registrar al menos 2 equipos primero.", "error");
+            }
+
+            const optionsHtml = leagueState.teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+            document.getElementById('match-home-team').innerHTML = optionsHtml;
+            document.getElementById('match-away-team').innerHTML = optionsHtml;
+            document.getElementById('match-edit-id').value = matchId || '';
+
+            if (matchId) {
+                const m = leagueState.matches.find(x => x.id === matchId);
+                document.getElementById('match-round-input').value = m.round;
+                document.getElementById('match-date-input').value = m.date;
+                document.getElementById('match-home-team').value = m.homeId;
+                document.getElementById('match-away-team').value = m.awayId;
+                document.getElementById('match-home-score').value = m.homeScore;
+                document.getElementById('match-away-score').value = m.awayScore;
+                document.getElementById('match-status-input').value = m.status;
+            } else {
+                document.getElementById('match-away-team').selectedIndex = 1;
+                document.getElementById('match-home-score').value = 0;
+                document.getElementById('match-away-score').value = 0;
+                document.getElementById('match-status-input').value = 'finished';
+            }
+            openModal('modal-match');
+        };
+
+        window.saveMatch = () => {
+            if (!isAdminMode) return;
+            const id = document.getElementById('match-edit-id').value;
+            const homeId = document.getElementById('match-home-team').value;
+            const awayId = document.getElementById('match-away-team').value;
+            if (homeId === awayId) return showToast("El equipo local y visitante deben ser distintos", "error");
+
+            const matchObj = {
+                id: id || 'match_' + Date.now(),
+                round: document.getElementById('match-round-input').value.trim() || 'Jornada',
+                date: document.getElementById('match-date-input').value.trim(),
+                homeId,
+                awayId,
+                homeScore: parseInt(document.getElementById('match-home-score').value) || 0,
+                awayScore: parseInt(document.getElementById('match-away-score').value) || 0,
+                status: document.getElementById('match-status-input').value
+            };
+
+            if (id) {
+                const idx = leagueState.matches.findIndex(m => m.id === id);
+                if (idx !== -1) leagueState.matches[idx] = matchObj;
+            } else {
+                leagueState.matches.push(matchObj);
+            }
+
+            closeModal('modal-match');
+            persistState();
+            showToast("Partido guardado y tabla actualizada", "success");
+        };
+
+        window.deleteMatch = (matchId) => {
+            if (!isAdminMode) return;
+            leagueState.matches = leagueState.matches.filter(m => m.id !== matchId);
+            persistState();
+            showToast("Partido eliminado", "info");
+        };
+
+        // Sancionados
+        window.openSuspensionModal = () => {
+            if (!isAdminMode) return;
+            if (leagueState.teams.length === 0) return showToast("Primero registra un equipo", "error");
+            document.getElementById('susp-team-select').innerHTML = leagueState.teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+            document.getElementById('susp-player-name').value = '';
+            openModal('modal-suspension');
+        };
+
+        window.saveSuspension = () => {
+            if (!isAdminMode) return;
+            const playerName = document.getElementById('susp-player-name').value.trim();
+            if (!playerName) return showToast("Ingresa el nombre del jugador sancionado", "error");
+
+            leagueState.suspensions.unshift({
+                id: 'susp_' + Date.now(),
+                teamId: document.getElementById('susp-team-select').value,
+                playerName,
+                reason: document.getElementById('susp-reason').value,
+                games: document.getElementById('susp-games').value.trim() || '1 Partido',
+                status: document.getElementById('susp-status').value
+            });
+
+            closeModal('modal-suspension');
+            persistState();
+            showToast("Sanción publicada en el boletín oficial", "success");
+        };
+
+        window.toggleSuspensionStatus = (id) => {
+            if (!isAdminMode) return;
+            const s = leagueState.suspensions.find(x => x.id === id);
+            if (s) {
+                s.status = s.status === 'Activo' ? 'Cumplido' : 'Activo';
+                persistState();
+            }
+        };
+
+        window.deleteSuspension = (id) => {
+            if (!isAdminMode) return;
+            leagueState.suspensions = leagueState.suspensions.filter(s => s.id !== id);
+            persistState();
+            showToast("Registro disciplinario eliminado", "info");
+        };
+
+        // ================= UTILIDADES DE IMAGEN, MODALES Y PESTAÑAS =================
+
+        // Redimensionar y comprimir imagen subida a DataURL ligero (para guardar rápido en Firestore sin exceder límite de 1MB)
+        window.handleImageUpload = (fileInput, targetUrlInputId) => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 180; // Tamaño óptimo y nítido para escudos
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > h && w > maxSize) {
+                        h = Math.round((h * maxSize) / w);
+                        w = maxSize;
+                    } else if (h > maxSize) {
+                        w = Math.round((w * maxSize) / h);
+                        h = maxSize;
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const compressedDataUrl = canvas.toDataURL('image/png', 0.85);
+                    document.getElementById(targetUrlInputId).value = compressedDataUrl;
+                    showToast("Escudo cargado y optimizado", "success");
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.className = "tab-btn active px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-primary-custom text-slate-950 shadow-lg";
+                } else if (btn.dataset.tab === 'settings') {
+                    btn.className = "admin-only tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30";
+                } else {
+                    btn.className = "tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition cursor-pointer bg-white/5 text-slate-300 hover:bg-white/10";
+                }
+            });
+        };
+
+        window.openModal = (id) => {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        };
+
+        window.closeModal = (id) => {
+            const el = document.getElementById(id);
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        };
+
+        function showToast(msg, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                success: "bg-emerald-600 text-white border-emerald-400",
+                error: "bg-rose-600 text-white border-rose-400",
+                info: "bg-slate-800 text-white border-white/20"
+            };
+            toast.className = `px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        // Arrancar aplicación
+        window.onload = initApp;
+    </script>
+</body>
+</html>
